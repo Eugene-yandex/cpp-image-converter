@@ -62,6 +62,9 @@ Image LoadPPM(const Path& file) {
     for (int y = 0; y < h; ++y) {
         Color* line = result.GetLine(y);
         ifs.read(buff.data(), w * 3);
+        if (!ifs.good()) {
+            return {};
+        }
 
         for (int x = 0; x < w; ++x) {
             line[x].r = static_cast<byte>(buff[x * 3 + 0]);

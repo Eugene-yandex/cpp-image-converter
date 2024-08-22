@@ -8,6 +8,8 @@
 using namespace std;
 
 namespace img_lib {
+    const int COUNT_ELEMENTS_PIXEL = 3;
+    const int MULTIPLICITY_OF_ALIGNMENT = 4;
 
     PACKED_STRUCT_BEGIN BitmapFileHeader{
         array<char,2> signature{'B','M'};
@@ -33,7 +35,7 @@ namespace img_lib {
     PACKED_STRUCT_END
 
 static int GetBMPStride(int w) {
-        return 4 * ((w * 3 + 3) / 4);
+        return MULTIPLICITY_OF_ALIGNMENT * ((w * COUNT_ELEMENTS_PIXEL + COUNT_ELEMENTS_PIXEL) / MULTIPLICITY_OF_ALIGNMENT);
     }
 
     // напишите эту функцию
@@ -41,7 +43,7 @@ static int GetBMPStride(int w) {
         ofstream out(file, ios::binary);
 
         BitmapFileHeader file_header;
-        int indent = GetBMPStride(image.GetWidth());
+        const int indent = GetBMPStride(image.GetWidth());
         file_header.indentation_from_the_beginning = sizeof(BitmapFileHeader) + sizeof(BitmapInfoHeader);
         file_header.size_all = file_header.indentation_from_the_beginning + (indent * image.GetHeight());
         out.write(reinterpret_cast<char*>(&file_header), sizeof(BitmapFileHeader));
@@ -58,9 +60,9 @@ static int GetBMPStride(int w) {
         for (int y = info_header.height -1; y >= 0; --y) {
             const Color* line = image.GetLine(y);
             for (int x = 0; x < info_header.width; ++x) {
-                buff[x * 3 + 2] = static_cast<char>(line[x].r);
-                buff[x * 3 + 1] = static_cast<char>(line[x].g);
-                buff[x * 3] = static_cast<char>(line[x].b);
+                buff[x * COUNT_ELEMENTS_PIXEL + 2] = static_cast<char>(line[x].r);
+                buff[x * COUNT_ELEMENTS_PIXEL + 1] = static_cast<char>(line[x].g);
+                buff[x * COUNT_ELEMENTS_PIXEL] = static_cast<char>(line[x].b);
             }
             out.write(buff.data(), indent);
         }
@@ -77,7 +79,14 @@ static int GetBMPStride(int w) {
         BitmapInfoHeader info_header;
 
         ifs.read(reinterpret_cast<char*>(&file_header), sizeof(BitmapFileHeader));
+        if (!ifs.good()) {
+            return {};
+        }
+
         ifs.read(reinterpret_cast<char*>(&info_header), sizeof(BitmapInfoHeader));
+        if (!ifs.good()) {
+            return {};
+        }
 
         if (file_header.signature[0] != 'B' || file_header.signature[1] != 'M') {
             return {};
@@ -91,11 +100,14 @@ static int GetBMPStride(int w) {
         for (int y = info_header.height - 1; y >= 0; --y) {
             Color* line = result.GetLine(y);
             ifs.read(buff.data(), indent);
+            if (!ifs.good()) {
+                return {};
+            }
 
             for (int x = 0; x < info_header.width; ++x) {
-                line[x].r = static_cast<byte>(buff[x * 3 + 2]);
-                line[x].g = static_cast<byte>(buff[x * 3 + 1]);
-                line[x].b = static_cast<byte>(buff[x * 3]);
+                line[x].r = static_cast<byte>(buff[x * COUNT_ELEMENTS_PIXEL + 2]);
+                line[x].g = static_cast<byte>(buff[x * COUNT_ELEMENTS_PIXEL + 1]);
+                line[x].b = static_cast<byte>(buff[x * COUNT_ELEMENTS_PIXEL]);
             }
         }
 
